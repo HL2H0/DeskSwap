@@ -2,16 +2,17 @@
 
 namespace DeskSwap;
 
-public class Program
+public static class Program
 {
     // System paths
-    public static string DesktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-    public static string PublicDesktopPath = Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory);
-    public static string DocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-
+    public static readonly string DesktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+    public static readonly string PublicDesktopPath = Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory);
+    public static readonly string DocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+    
+    //DeskSwap paths
     public static string TempDumpPath = Path.Combine(Path.GetTempPath(), "DeskSwap");
 
-    public static string ProfilesPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DeskSwap", "Profiles");
+    public static string ProfilesPath = Path.Combine(DocumentsPath, "DeskSwap", "Profiles");
 
     public static void Main(string[] args)
     {
@@ -24,7 +25,7 @@ public class Program
         {
             Console.Write("\t\t> ");
 
-            string input = Console.ReadLine();
+            string input = Console.ReadLine() ?? string.Empty;
             Console.Write("\n");
             WriteHeader();
             switch (input)
@@ -32,16 +33,17 @@ public class Program
                 case "help":
                     Console.WriteLine("\t\t Commands  | Description");
                     Console.WriteLine("\t\t --------- + ----------------------------------------------");
-                    Console.WriteLine("\t\t1. dump    | Create temp dump of your current desktop state.");
-                    Console.WriteLine("\t\t2. restore | Restore your desktop state from the last temp dump.");
-                    Console.WriteLine("\t\t3. profile | Create a new profile based on the current desktop");
-                    Console.WriteLine("\t\t4. help    | Show this help message.");
-                    Console.WriteLine("\t\t5. clear   | Clear the console.");
-                    Console.WriteLine("\t\t6. about   | About DeskSwap.");
-                    Console.WriteLine("\t\t7. list    | List all profiles.");
-                    Console.WriteLine("\t\t8. load    | Load a profile.");
-                    Console.WriteLine("\t\t9. delete  | Delete a profile.");
-                    Console.WriteLine("\t\t10.exit    | Exit the program.");
+                    Console.WriteLine("\t\t- dump     | Create temp dump of your current desktop state.");
+                    Console.WriteLine("\t\t- restore  | Restore your desktop state from the last temp dump.");
+                    Console.WriteLine("\t\t- profile  | Create a new profile based on the current desktop");
+                    Console.WriteLine("\t\t- edit     | Edit a profile");
+                    Console.WriteLine("\t\t- help     | Show this help message.");
+                    Console.WriteLine("\t\t- about    | About DeskSwap.");
+                    Console.WriteLine("\t\t- list     | List all profiles.");
+                    Console.WriteLine("\t\t- load     | Load a profile.");
+                    Console.WriteLine("\t\t- delete   | Delete a profile.");
+                    Console.WriteLine("\t\t- clear    | Clear the console.");
+                    Console.WriteLine("\t\t- exit     | Exit the program.");
                     Console.Write("\n");
                     break;
 
@@ -56,8 +58,7 @@ public class Program
                 case "restore":
                      RestoreTempDump();
                      break;
-
-
+                
                 case "exit":
                     Console.WriteLine("\t\tThanks for using DeskSwap! Bye!");
                     Thread.Sleep(1000);
@@ -97,9 +98,9 @@ public class Program
         {
             Console.WriteLine("\t\tNo profiles found.");
             return;
-        }
-        Console.WriteLine("\t\t Profile    | Description");
-        Console.WriteLine("\t\t ---------- + ---------------------------------------------");
+        }   
+        Console.WriteLine("\t\t Profile       | Description");
+        Console.WriteLine("\t\t ------------- + ---------------------------------------------");
         foreach (string profile in profiles)
         {
             string profileName = Path.GetFileName(profile);
@@ -116,50 +117,165 @@ public class Program
 
     public static void CreateProfile(string name, string description = "None")
     {
-        var profilePath = Path.Combine(ProfilesPath, name);
-        if (Directory.Exists(profilePath))
+        var profilePath = Path.Combine(ProfilesPath, name, $"{name}.json");
+        if (File.Exists(profilePath))
         {
-            Console.WriteLine("\t\tProfile already exists. Please choose a different name.");
+            Console.WriteLine("\t\tProfile already exists. Please check the name and try again.");
             return;
         }
-        Directory.CreateDirectory(profilePath);
+        
         string[] files = Directory.GetFiles(DesktopPath);
         string[] publicFiles = Directory.GetFiles(PublicDesktopPath);
         string[] folders = Directory.GetDirectories(DesktopPath);
         string[] publicFolders = Directory.GetDirectories(PublicDesktopPath);
-
-        string [] allFiles = files.Concat(publicFiles).ToArray();
-        string[] allFolders = folders.Concat(publicFolders).ToArray();
-
-        Dictionary<string, string> originalPaths = new Dictionary<string, string>();
-
-        if(allFiles.Contains($"_{name}.json"))
-        {
-            allFiles = allFiles.Where(x => x != $"_{name}.json").ToArray();
-        }
+        
+        string[] allFiles = files.Concat(publicFiles).ToArray();
+        Dictionary<string, bool> allFilesDict = new Dictionary<string, bool>();
         foreach (string file in allFiles)
         {
             var fileInfo = new FileInfo(file);
-            string fileName = fileInfo.Name;
             string filePath = fileInfo.FullName;
-            string tempPath = Path.Combine(profilePath, fileName);
-            File.Move(filePath, tempPath);
-            originalPaths.Add(fileName, filePath);
+            allFilesDict.Add(filePath, true);
         }
+        string[] allFolders = folders.Concat(publicFolders).ToArray();
+        Dictionary<string, bool> allFoldersDict = new Dictionary<string, bool>();
         foreach (string folder in allFolders)
         {
             var folderInfo = new DirectoryInfo(folder);
-            string folderName = folderInfo.Name;
             string folderPath = folderInfo.FullName;
-            string tempPath = Path.Combine(profilePath, folderName);
-            Directory.Move(folderPath, tempPath);
+            allFoldersDict.Add(folderPath, true);
         }
-        var profile = new DeskSwapProfile(name, description, allFolders, allFiles, originalPaths);
-        string profileJsonPath = Path.Combine(profilePath, $"_{name}.json");
+        
+        var profile = new DeskSwapProfile(name, description, allFoldersDict ,allFilesDict, new Dictionary<string, string>());
         string json = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(profileJsonPath, json);
+        File.WriteAllText(profilePath, json);
         Console.WriteLine($"\t\tProfile {name} created successfully!");
-        Console.WriteLine($"\t\tTip:You can now use `load {name}` to load this profile.\n");
+        Console.WriteLine($"\t\tTip: You can now use `edit` to customize this profile\n");
+        
+
+
+        // Directory.CreateDirectory(profilePath);
+        // string[] files = Directory.GetFiles(DesktopPath);
+        // string[] publicFiles = Directory.GetFiles(PublicDesktopPath);
+        // string[] folders = Directory.GetDirectories(DesktopPath);
+        // string[] publicFolders = Directory.GetDirectories(PublicDesktopPath);
+        //
+        // string [] allFiles = files.Concat(publicFiles).ToArray();
+        // string[] allFolders = folders.Concat(publicFolders).ToArray();
+        //
+        // Dictionary<string, string> originalPaths = new Dictionary<string, string>();
+        //
+        // if(allFiles.Contains($"_{name}.json"))
+        // {
+        //     allFiles = allFiles.Where(x => x != $"_{name}.json").ToArray();
+        // }
+        // foreach (string file in allFiles)
+        // {
+        //     var fileInfo = new FileInfo(file);
+        //     string fileName = fileInfo.Name;
+        //     string filePath = fileInfo.FullName;
+        //     string tempPath = Path.Combine(profilePath, fileName);
+        //     File.Move(filePath, tempPath);
+        //     originalPaths.Add(fileName, filePath);
+        // }
+        // foreach (string folder in allFolders)
+        // {
+        //     var folderInfo = new DirectoryInfo(folder);
+        //     string folderName = folderInfo.Name;
+        //     string folderPath = folderInfo.FullName;
+        //     string tempPath = Path.Combine(profilePath, folderName);
+        //     Directory.Move(folderPath, tempPath);
+        // }
+        // var profile = new DeskSwapProfile(name, description, allFolders, allFiles, originalPaths);
+        // string profileJsonPath = Path.Combine(profilePath, $"_{name}.json");
+        // string json = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
+        // File.WriteAllText(profileJsonPath, json);
+        // Console.WriteLine($"\t\tProfile {name} created successfully!");
+        // Console.WriteLine($"\t\tTip:You can now use `load {name}` to load this profile.\n");
+    }
+
+    public static void EditProfile(string name)
+    {
+        var profilePath = Path.Combine(ProfilesPath, name);
+        if (!Directory.Exists(profilePath))
+        {
+            Console.WriteLine("\t\tProfile not found. Please check the name and try again.");
+            return;
+        }
+        string profileJsonPath = Path.Combine(profilePath, $"{name}.json");
+        if (!File.Exists(profileJsonPath))
+        {
+            Console.WriteLine("\t\tProfile not found. Please check the name and try again.");
+            return;
+        }
+        Console.WriteLine("Quick Note: This will open the profile in your default text editor.");
+        Console.WriteLine("You'll see the item's name and if it used or not.");
+        Console.WriteLine("You can edit the file and save it to apply the changes.\n");
+        Console.WriteLine("So, are you ready to edit, Click any key to continue...");
+        Console.ReadKey();
+        Console.WriteLine("\t\tEditing profile...");
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = profileJsonPath,
+            UseShellExecute = true
+        });
+        
+        // var profilePath = Path.Combine(ProfilesPath, name, $"{name}.json"); 
+        // if (!File.Exists(profilePath))
+        //     return;
+        // string profileJsonPath = Path.Combine(profilePath, $"{name}.json");
+        // var profile = JsonSerializer.Deserialize<DeskSwapProfile>(File.ReadAllText(profileJsonPath));
+        // if(profile == null)
+        //     return;
+        // string[] allItems = profile.Folders.Concat(profile.Files).ToArray();
+        // Console.WriteLine($"\t\tEditing profile {name}...");
+        // Console.WriteLine("\t\tID  | Item");
+        // for (var i = 0; i < allItems.Length; i++)
+        // {
+        //     Console.WriteLine($"{i} | {allItems[i]}");
+        // }
+        //
+        // while (true)
+        // {
+        //     Console.WriteLine("\t\t Now, enter the ID of the item you want to remove, or `done` to finish editing:");
+        //     Console.Write("\t\t> ");
+        //     string input = Console.ReadLine() ?? string.Empty;
+        //     if (input == "done")
+        //         break;
+        //     if (int.TryParse(input, out int id))
+        //     {
+        //         if (id < 0 || id >= allItems.Length)
+        //         {
+        //             Console.WriteLine("\t\tInvalid ID. Please try again.");
+        //             continue;
+        //         }
+        //         string item = allItems[id];
+        //         if (profile.Files.Contains(item))
+        //         {
+        //             profile.Files = profile.Files.Where(x => x != item).ToArray();
+        //         }
+        //         else if (profile.Folders.Contains(item))
+        //         {
+        //             profile.Folders = profile.Folders.Where(x => x != item).ToArray();
+        //         }
+        //         else
+        //         {
+        //             Console.WriteLine("\t\tItem not found in profile.");
+        //             continue;
+        //         }
+        //         Console.WriteLine($"\t\tItem {item} removed from profile {name}.");
+        //     }
+        //     else
+        //     {
+        //         Console.WriteLine("\t\tInvalid input. Please enter a valid ID or `done`.");
+        //     }
+        // }
+        // Console.WriteLine("\t\tSaving profile...");
+        // string json = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
+        // File.WriteAllText(profileJsonPath, json);
+        // WriteHeader();
+        // Console.WriteLine($"\t\tProfile {name} edited successfully!");
+        // Console.WriteLine("\t\tTip: You can always `load default` to restore your desktop!\n");
     }
 
     public static void LoadProfile(string name)
@@ -186,7 +302,7 @@ public class Program
         {
             var fileInfo = new FileInfo(file);
             string fileName = fileInfo.Name;
-            string orginalPath = originalPaths[fileName];
+            string originalPath = originalPaths[fileName];
             string filePath = fileInfo.FullName;
             string tempPath = Path.Combine(profilePath, fileName);
             File.Move(tempPath, filePath);
@@ -195,14 +311,12 @@ public class Program
         {
             var folderInfo = new DirectoryInfo(folder);
             string folderName = folderInfo.Name;
-            string orginalPath = originalPaths[folderName];
+            string originalPath = originalPaths[folderName];
             string folderPath = folderInfo.FullName;
             string tempPath = Path.Combine(profilePath, folderName);
             Directory.Move(tempPath, folderPath);
         }
-        profile.OriginalPaths.Clear();
-        profile.Files = Array.Empty<string>();
-        profile.Folders = Array.Empty<string>();
+        
         File.WriteAllText(profileJsonPath, JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true }));
         Console.WriteLine($"\t\tProfile {name} loaded successfully!");
         Console.WriteLine("\t\tTip: You can always `load default` to restore your desktop!\n");
@@ -281,8 +395,8 @@ public class Program
         }
 
         Console.WriteLine("\t\tRestoring temp dump...");
-        string[] files = profile.Files;
-        string[] folders = profile.Folders;
+        string[] files = profile.Files.Keys.ToArray();
+        string[] folders = profile.Folders.Keys.ToArray();
         Dictionary<string, string> originalPaths = profile.OriginalPaths;
 
         if(files.Contains("_tempdump.json"))
@@ -294,7 +408,7 @@ public class Program
         {
             var fileInfo = new FileInfo(file);
             string fileName = fileInfo.Name;
-            string orginalPath = originalPaths[fileName];
+            string originalPath = originalPaths[fileName];
             string filePath = fileInfo.FullName;
             string tempPath = Path.Combine(TempDumpPath, fileName);
             File.Move(tempPath, filePath);
@@ -303,7 +417,7 @@ public class Program
         {
             var folderInfo = new DirectoryInfo(folder);
             string folderName = folderInfo.Name;
-            string orginalPath = originalPaths[folderName];
+            string originalPath = originalPaths[folderName];
             string folderPath = folderInfo.FullName;
             string tempPath = Path.Combine(TempDumpPath, folderName);
             Directory.Move(tempPath, folderPath);
