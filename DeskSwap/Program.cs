@@ -386,8 +386,8 @@ public static class Program
 
         var defaultProfileData = File.ReadAllText(defaultProfilePath);
         var defaultProfileObj = JsonSerializer.Deserialize<DeskSwapProfile>(defaultProfileData);
-
-        if (profileObj == null)
+        
+        if (profileObj == null || defaultProfileObj == null)
         {
             Console.WriteLine("\t\t[ERROR] Profile is found but could not be loaded.");
             Console.WriteLine("\t\tMaybe the file is corrupted or not a valid profile.");
@@ -481,50 +481,7 @@ public static class Program
                 Console.WriteLine($"\t\t[ERROR] Could not move file {fileName}: {ex.Message}");
             }
         }
-
-        // // Move profile items to desktop
-        // foreach (var folder in profileObj.Folders)
-        // {
-        //     var folderName = Path.GetFileName(folder);
-        //     var newFolderPath = Path.Combine(Paths.DesktopPath, folderName);
-        //     if (Directory.Exists(newFolderPath))
-        //     {
-        //         Console.WriteLine($"\t\t[ERROR] Folder {folderName} already exists on the desktop.");
-        //         continue;
-        //     }
-        //     try
-        //     {
-        //         if (Directory.Exists(folder))
-        //         {
-        //             Directory.Move(folder, newFolderPath);
-        //         }
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         Console.WriteLine($"\t\t[ERROR] Could not move folder {folderName}: {ex.Message}");
-        //     }
-        // }
-        //
-        // foreach (var file in profileObj.Files)
-        // {
-        //     var fileName = Path.GetFileName(file);
-        //     var newFilePath = Path.Combine(Paths.DesktopPath, fileName);
-        //     if (File.Exists(newFilePath))
-        //     {
-        //         Console.WriteLine($"\t\t[ERROR] File {fileName} already exists on the desktop.");
-        //         continue;
-        //     }
-        //     try
-        //     {
-        //         if (File.Exists(file))
-        //         {
-        //             File.Move(file, newFilePath);
-        //         }
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         Console.WriteLine($"\t\t[ERROR] Could not move file {fileName}: {ex.Message}");
-        //     }
+        
     }
 }
     
