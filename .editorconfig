@@ -1,3 +1,0 @@
-[*.cs]
-# Braces on new lines for methods, control blocks, etc.
-csharp_new_line_before_open_brace = all
