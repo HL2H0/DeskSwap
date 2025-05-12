@@ -98,7 +98,14 @@ public static class Program
                     var profileName = Console.ReadLine() ?? string.Empty;
                     LoadProfile(profileName);
                     break;
-
+                
+                case "delete":
+                    Console.WriteLine("\t\tPlease enter the name of the profile:");
+                    Console.Write("\t\tProfile Name> ");
+                    var profileNameToDelete = Console.ReadLine() ?? string.Empty;
+                    DeleteProfile(profileNameToDelete);
+                    break;
+                
                 case "edit":
                     Console.WriteLine("\t\tPlease enter the name of the profile:");
                     Console.Write("\t\tProfile Name> ");
@@ -138,8 +145,8 @@ public static class Program
                     break;
 
                 default:
-                    Console.WriteLine(
-                        "\t\tHmmm. This doesn't seem like a valid command\n\t\tYou can always use `help` for help(obviously lol)");
+                    Console.WriteLine("\t\tHmmm. This doesn't seem like a valid command.");
+                    Console.WriteLine("\t\tYou can use `help` to see all the commands.\n");
                     break;
             }
         }
@@ -280,6 +287,21 @@ public static class Program
         File.WriteAllText(profilePath, newJson);
         Console.WriteLine("\t\tDone! Your profile has been updated.");
         Utilities.WriteHeader();
+    }
+    
+    private static void DeleteProfile(string name)
+    {
+        var profilePath = Path.Combine(Paths.ProfilesPath, $"{name}.json");
+        if (!File.Exists(profilePath))
+        {
+            Console.WriteLine($"\t\tAh sorry, but the profile {name} does not exist.");
+            Console.WriteLine("\t\tMaybe you have misspelled the name or it was deleted?");
+            Console.WriteLine("\t\tYou can use `list` to see all the profiles you have.\n\n");
+            return;
+        }
+
+        File.Delete(profilePath);
+        Console.WriteLine($"\t\tProfile {name} deleted successfully!");
     }
 
     private static void ListProfiles()
