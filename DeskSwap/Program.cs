@@ -32,8 +32,8 @@ public static class Program
 
             Console.WriteLine("\t\tHi there! This is your first time using DeskSwap.");
             Console.WriteLine("\t\tTo get started, we'll need to make sure you have everything set up.\n");
-            Console.WriteLine("\t\t-Make sure you have all of your files, folders and shortcuts on your desktop.");
-            Console.WriteLine("\t\tOnce that's done, press any key...\n\n\t\t");
+            Console.WriteLine("\t\t-Make sure you have all of your files, folders and shortcuts on your desktop.\n");
+            Console.WriteLine("\t\tOnce that's done, press any key...\n\n");
             Console.ReadKey();
             CreateProfile("Default", "Default profile created by DeskSwap", false);
             Utilities.WriteHeader();
@@ -307,8 +307,6 @@ public static class Program
             Console.WriteLine($"\t\t- {profileObj.Name} : {profileObj.Description}");
 
         }
-
-        Console.WriteLine("---===============================---");
         Console.WriteLine("\n\t\tTip : You can use `load` to load a profile.\n");
     }
 
